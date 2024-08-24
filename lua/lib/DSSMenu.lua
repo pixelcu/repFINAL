@@ -92,9 +92,17 @@ return function(mod)
 		},
 		enable = {
 			en = "enable",
-			ru = "включен",
+			ru = "включить",
 		},
 		disable = {
+			en = "disable",
+			ru = "выключить",
+		},
+		enabled = {
+			en = "enabled",
+			ru = "включен",
+		},
+		disabled = {
 			en = "disabled",
 			ru = "выключен",
 		},
@@ -139,6 +147,30 @@ return function(mod)
 			en = "jingle settings",
 			ru = "настройки джинглов",
 		},
+		enable_all_music = {
+			en = "enable all music and jingles",
+			ru = "включить всю музыку и джинглы",
+		},
+        disable_all_music = {
+			en = "disable all music and jingles",
+			ru = "выключить всю музыку и джинглы",
+		},
+		other_settings = {
+			en = "other settings",
+			ru = "другие настройки"
+		},
+		happy_start = {
+			en = "happy start",
+			ru = "счастливый старт"
+		},
+		music_button_enable = {
+			en = "enables all mod's music and jingles",
+			ru = "включает всю музыку и джинглы из мода",
+		},
+		music_button_disable = {
+			en = "disables all mod's music and jingles",
+			ru = "выключает всю музыку и джинглы из мода",
+		}
 	}
 
 	local function GetStr(str)
@@ -168,13 +200,16 @@ return function(mod)
 		local MM = {}
 
 		for musicId, name in pairs(music) do
+			if not RepMMod.saveTable.MusicData.Music[name] then
+				RepMMod.saveTable.MusicData.Music[name] = 1
+			end
 			MM[#MM + 1] = {
 				strset = SplitString(name:sub(21):lower(), 18),
-				choices = { GetStr("enable"), GetStr("disable") },
+				choices = { GetStr("enabled"), GetStr("disabled") },
 				variable = name,
 				setting = 1,
 				load = function()
-					return RepMMod.saveTable.MusicData.Music[name] or 2
+					return RepMMod.saveTable.MusicData.Music[name] or 1
 				end,
 				store = function(var)
 					RepMMod.saveTable.MusicData.Music[name] = var
@@ -214,13 +249,16 @@ return function(mod)
 		local MM = {}
 
 		for jingleId, name in pairs(jingle) do
+			if not RepMMod.saveTable.MusicData.Jingle[name] then
+				RepMMod.saveTable.MusicData.Jingle[name] = 1
+			end
 			MM[#MM + 1] = {
 				strset = SplitString(name:sub(21):lower(), 18),
-				choices = { GetStr("enable"), GetStr("disable") },
+				choices = { GetStr("enabled"), GetStr("disabled") },
 				variable = name,
 				setting = 1,
 				load = function()
-					return RepMMod.saveTable.MusicData.Jingle[name] or 2
+					return RepMMod.saveTable.MusicData.Jingle[name] or 1
 				end,
 				store = function(var)
 					RepMMod.saveTable.MusicData.Jingle[name] = var
@@ -239,7 +277,7 @@ return function(mod)
 					RepMMod.saveTable.MusicData.Jingle[name] = newVal and 1 or 2
 					mod.StoreSaveData()
 				end,
-				false
+				true
 			)
 
 			ig.AddCallback("RepMModSettingsTabBarJingleTab" .. name:sub(21), ImGuiCallback.Render, function()
@@ -273,6 +311,30 @@ return function(mod)
 
 	ig.AddElement("RepMModSettingsWindow", "RepMModSettingsTabBar", ImGuiElement.TabBar)
 	ig.AddElement("RepMModSettingsTabBar", "RepMModSettingsTabMusic", ImGuiElement.Tab, GetStr("music_manager"))
+	ig.AddButton("RepMModSettingsTabMusic", "RepMModSettingsTabMusicButtonEnable", GetStr("enable"), function (clickCount)
+		local music, jingle = mod.GetModdedMusicTable()
+		for musicId, name in pairs(music) do
+			RepMMod.saveTable.MusicData.Music[name] = 1
+			mod.ChangeFloorMusicTo(musicId, Isaac.GetMusicIdByName(name), true)
+		end
+		for jingleId, name in pairs(jingle) do
+			RepMMod.saveTable.MusicData.Jingle[name] = 1
+		end
+		mod.StoreSaveData()
+	end)
+	ig.SetTooltip("RepMModSettingsTabMusicButtonEnable", GetStr("music_button_enable"))
+	ig.AddButton("RepMModSettingsTabMusic", "RepMModSettingsTabMusicButtonDisable", GetStr("disable"), function (clickCount)
+		local music, jingle = mod.GetModdedMusicTable()
+		for musicId, name in pairs(music) do
+			RepMMod.saveTable.MusicData.Music[name] = 2
+			mod.ChangeFloorMusicTo(musicId, Isaac.GetMusicIdByName(name), false)
+		end
+		for jingleId, name in pairs(jingle) do
+			RepMMod.saveTable.MusicData.Jingle[name] = 2
+		end
+		mod.StoreSaveData()
+	end)
+	ig.SetTooltip("RepMModSettingsTabMusicButtonDisable", GetStr("music_button_disable"))
 	ig.AddElement("RepMModSettingsTabMusic", "RepMModSettingsTabBarMusicManager", ImGuiElement.TabBar)
 
 	ig.AddElement(
@@ -288,7 +350,7 @@ return function(mod)
 		GetStr("jingle_settings")
 	)
 
-	ig.AddElement("RepMModSettingsTabBar", "RepMModSettingsTabMisc", ImGuiElement.Tab, "Others")
+	ig.AddElement("RepMModSettingsTabBar", "RepMModSettingsTabMisc", ImGuiElement.Tab, GetStr("other_settings"))
 
 	ig.AddCheckbox("RepMModSettingsTabMisc", "RepMModSettingsTabMiscHappyStart", GetStr("happy_start"), function(newVal)
 		RepMMod.saveTable.MenuData.StartThumbsUp = newVal and 1 or 2
@@ -349,6 +411,36 @@ return function(mod)
 				{ str = GetStr("music_settings"), dest = "music_settings" },
 				{ str = "", nosel = true, fsize = 2 },
 				{ str = GetStr("jingle_settings"), dest = "jingle_settings" },
+				{ str = "", nosel = true, fsize = 2 },
+				{
+					strset = SplitString(GetStr("enable_all_music"), 21),
+					func = function(button, page, item)
+						local music, jingle = mod.GetModdedMusicTable()
+						for musicId, name in pairs(music) do
+							RepMMod.saveTable.MusicData.Music[name] = 1
+							mod.ChangeFloorMusicTo(musicId, Isaac.GetMusicIdByName(name), true)
+						end
+						for jingleId, name in pairs(jingle) do
+							RepMMod.saveTable.MusicData.Jingle[name] = 1
+						end
+						dssmod.closeMenu(item, false)
+					end,
+				},
+                { str = "", nosel = true, fsize = 2 },
+                {
+					strset = SplitString(GetStr("disable_all_music"), 21),
+					func = function(button, page, item)
+						local music, jingle = mod.GetModdedMusicTable()
+						for musicId, name in pairs(music) do
+							RepMMod.saveTable.MusicData.Music[name] = 2
+							mod.ChangeFloorMusicTo(musicId, Isaac.GetMusicIdByName(name), false)
+						end
+						for jingleId, name in pairs(jingle) do
+							RepMMod.saveTable.MusicData.Jingle[name] = 2
+						end
+						dssmod.closeMenu(item, false)
+					end,
+				},
 			},
 			tooltip = { strset = { "manage music", "and jingles" } },
 		},

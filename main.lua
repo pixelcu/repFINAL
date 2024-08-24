@@ -3077,7 +3077,7 @@ mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, mod.OnRiftCollide, mod.RepmT
 --Isaac.GetPersistentGameData():TryUnlock(FrostyAchId)
 
 function mod:Anm(player)
-	if game:GetFrameCount() == 1 and mod.MenuData and mod.MenuData.StartThumbsUp ~= 2 then
+	if game:GetFrameCount() == 1 and mod.saveTable.MenuData and mod.saveTable.MenuData.StartThumbsUp ~= 2 then
 		player:AnimateHappy()
 	end
 end
