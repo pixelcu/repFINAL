@@ -3031,14 +3031,18 @@ function mod:AnyPlayerDo(foo)
 end
 
 function mod:saveData(isSaving)
-	local numPlayers = game:GetNumPlayers()
+	if isSaving then
+		mod.saveTable.Repm_CHAPIData = CustomHealthAPI.Library.GetHealthBackup()
+	end
 	local jsonString = json.encode(mod.saveTable)
 	mod:SaveData(jsonString)
 end
 mod:AddCallback(ModCallbacks.MC_PRE_GAME_EXIT, mod.saveData)
-mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, mod.saveData)
+mod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, function()
+	mod:saveData(true)
+end)
 
-function mod:loadData(isSave)
+function mod:loadData(isLoad)
 	DiliriumEyeLastActivateFrame = 0
 	if mod:HasData() then
 		local perData = json.decode(mod:LoadData())
@@ -3049,8 +3053,9 @@ function mod:loadData(isSave)
 			mod.saveTable.MusicData = perData.MusicData
 		end
 	end
-	if mod:HasData() and isSave then
+	if mod:HasData() and isLoad then
 		mod.saveTable = json.decode(mod:LoadData())
+		CustomHealthAPI.Library.LoadHealthFromBackup(mod.saveTable.Repm_CHAPIData)
 	else
 		mod.saveTable.PlayerData = {}
 		mod:AnyPlayerDo(function(player)
