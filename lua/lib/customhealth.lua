@@ -254,7 +254,7 @@ end, PickupVariant.PICKUP_HEART)
 ---@param collider EntityPlayer
 mod:AddCallback(ModCallbacks.MC_PRE_PICKUP_COLLISION, function(_, pickup, collider)
     --print(pickup.SubType)
-    if (pickup.SubType ~= iceHeartEntity) and pickup.SubType ~= HeartSubType.HEART_GOLDEN then return end
+    if (pickup.SubType ~= iceHeartEntity) then return end
     if collider.Type ~= EntityType.ENTITY_PLAYER then return end
     local collider = collider:ToPlayer()
     local bowMultiplier = collider:HasCollectible(CollectibleType.COLLECTIBLE_MAGGYS_BOW) and 2 or 1

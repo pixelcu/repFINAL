@@ -2762,7 +2762,7 @@ function mod:AnyPlayerDo(foo)
 end
 
 function mod:saveData(isSaving)
-	local numPlayers = game:GetNumPlayers()
+	mod.saveTable.Repm_CHAPIData = CustomHealthAPI.Library.GetHealthBackup()
 	local jsonString = json.encode(mod.saveTable)
 	mod:SaveData(jsonString)
 end
@@ -2781,6 +2781,9 @@ function mod:loadData(isSave)
 	end
 	if mod:HasData() and isSave then
 		mod.saveTable = json.decode(mod:LoadData())
+		if mod.saveTable.Repm_CHAPIData then
+			CustomHealthAPI.Library.LoadHealthFromBackup(mod.saveTable.Repm_CHAPIData)
+		end
 	else
 		mod.saveTable.PlayerData = {}
 		mod:AnyPlayerDo(function(player)
