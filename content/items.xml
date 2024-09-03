@@ -42,6 +42,8 @@
 	<active id="37" name="Holy Lighter" description="Baptism by fire" gfx="holy lighter.png" maxcharges = "6" chargetype = "normal" quality="2" />
 	<active id="38" name="Portal D6" description="Portal?" gfx="portald6.png" maxcharges = "6" quality="4" />
 	<active id="39" name="Portal D6 " description="Portal?" gfx="portald62.png" maxcharges = "6" quality="4" />
+
+	<familiar id="40" name="Saw Shield" description="Throw and Tear!" tags="offensive" gfx="ShieldSaw.png" quality="2" />
 <!-- Trinkets -->
 	<trinket name="Micro Amplifier" description="STOP!" gfx="microamplifier.png" />
 	<trinket name="Burnt Clover" description="The treasury is surprising" gfx="Clover.png" />

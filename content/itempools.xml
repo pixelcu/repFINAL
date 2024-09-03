@@ -15,6 +15,7 @@
 				<Item Name = "Frozen Flies" Weight = "1" DecreaseBy="1" RemoveOn="0.1" />	
 				<Item Name = "Portal D6" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1" />
 				<Item Name = "Frozen Food" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 				
+				<Item Name = "Saw Shield" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 				
 				
         </Pool>
 		<Pool Name= "shop">
@@ -68,7 +69,8 @@
 				<Item Name="sandwich" Weight="1" DecreaseBy="1" RemoveOn="0.1" />
 				<Item Name = "Rot" Weight="1" DecreaseBy="1" RemoveOn="0.1" />
 				<Item Name = "Frozen Flies" Weight = "1" DecreaseBy="1" RemoveOn="0.1" />
-				<Item Name = "Frozen Food" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 					
+				<Item Name = "Frozen Food" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 		
+				<Item Name = "Saw Shield" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 							
 		</Pool>
 		<Pool Name="ultraSecret">
 		<Item Name="PRObackstabber" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>
