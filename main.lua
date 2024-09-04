@@ -36,16 +36,19 @@ local customShieldFlags = {
     [CollectibleType.COLLECTIBLE_BRIMSTONE] = TearFlags.TEAR_BRIMSTONE_BOMB,
     [CollectibleType.COLLECTIBLE_IPECAC] = TearFlags.TEAR_POISON | TearFlags.TEAR_EXPLOSIVE,
     [CollectibleType.COLLECTIBLE_TOXIC_SHOCK] = TearFlags.TEAR_POISON,
-    [CollectibleType.COLLECTIBLE_SINUS_INFECTION] = TearFlags.TEAR_POISON,
-    [CollectibleType.COLLECTIBLE_SERPENTS_KISS] = TearFlags.TEAR_POISON,
     [CollectibleType.COLLECTIBLE_FIRE_MIND] = TearFlags.TEAR_BURN,
     [CollectibleType.COLLECTIBLE_PYROMANIAC] = TearFlags.TEAR_BURN | TearFlags.TEAR_EXPLOSIVE,
     [CollectibleType.COLLECTIBLE_SPIDER_BITE] = TearFlags.TEAR_SLOW,
     [CollectibleType.COLLECTIBLE_SULFURIC_ACID] = TearFlags.TEAR_ACID,
     [CollectibleType.COLLECTIBLE_BALL_OF_TAR] = TearFlags.TEAR_GISH,
     [CollectibleType.COLLECTIBLE_MOMS_KNIFE] = TearFlags.TEAR_NEEDLE,
+	[CollectibleType.COLLECTIBLE_MOMS_RAZOR] = TearFlags.TEAR_NEEDLE,
+	[CollectibleType.COLLECTIBLE_RAZOR_BLADE] = TearFlags.TEAR_NEEDLE,
     [CollectibleType.COLLECTIBLE_LODESTONE] = TearFlags.TEAR_MAGNETIZE,
     [CollectibleType.COLLECTIBLE_STRANGE_ATTRACTOR] = TearFlags.TEAR_MAGNETIZE,
+    [CollectibleType.COLLECTIBLE_EXPLOSIVO] = TearFlags.TEAR_EXPLOSIVE,
+	[CollectibleType.COLLECTIBLE_TRINITY_SHIELD] = TearFlags.TEAR_SHIELDED,
+	[CollectibleType.COLLECTIBLE_LOST_CONTACT] = TearFlags.TEAR_SHIELDED,
 }
 
 function mod:AddCustomSawShieldFlag(collectible, flag)
@@ -791,7 +794,7 @@ function mod:OnRoomClear_SimAxes()
 	local room = game:GetRoom()
 
 	if game:IsGreedMode() then
-		if Game():GetLevel():GetCurrentRoomDesc().GridIndex == 84 then
+		if game:GetLevel():GetCurrentRoomDesc().GridIndex == 84 then
 			mod:AnyPlayerDo(function(player)
 				if player:GetPlayerType() == SimType then
 					local playerRNG = player:GetDropRNG()
@@ -3451,7 +3454,7 @@ function mod:tryOpenDoor_Fro_Polaroid(player)
 	if
 		(
 			game:GetLevel():GetStage() == 6
-			or (game:GetLevel():GetStage() == 5 and Game():GetLevel():GetCurses() & LevelCurse.CURSE_OF_LABYRINTH ~= 0)
+			or (game:GetLevel():GetStage() == 5 and game:GetLevel():GetCurses() & LevelCurse.CURSE_OF_LABYRINTH ~= 0)
 		)
 		and game:GetLevel():GetStageType() <= 2
 		and player.Position.Y < 151
@@ -5050,11 +5053,13 @@ mod:AddCallback(ModCallbacks.MC_FAMILIAR_UPDATE, function(_, fam)
     if fam.State ~= 2 then
         if fam.State ~= 1 then
             d.Speed = math.max(0, d.Speed - 0.1)
-            d.ReturnCooldown = math.max(0, d.ReturnCooldown - 1)
         end
         if fam.Velocity:Length() < 2 then
             fam.PositionOffset.Y = lerp(fam.PositionOffset.Y, 0, 0.1)
         end
+		if fam.Velocity:Length() < 0.1 then
+			d.ReturnCooldown = math.max(0, d.ReturnCooldown - 1)
+		end
         
         fam.Velocity = fam.Velocity:Resized(d.Speed / CollisionWithEntity(fam))
         sprite.PlaybackSpeed = math.min(1.5, d.Speed)
@@ -5204,6 +5209,13 @@ mod:AddCallback("ON_SAW_SHIELD_GRID_COLLISION", function(grid, rng, shield, play
     end
 end, TearFlags.TEAR_ACID)
 
+
+mod:AddCallback("ON_SAW_SHIELD_COLLISION", function(shield, entity)
+	if entity:ToProjectile() then
+		entity:Die()
+	end
+end, TearFlags.TEAR_SHIELDED)
+
 ---@param fam EntityFamiliar
 ---@param gridIdx integer
 ---@param grid GridEntity
@@ -5260,6 +5272,22 @@ mod:AddCallback(ModCallbacks.MC_PRE_FAMILIAR_COLLISION, function(_, fam, coll, l
             end
         end
         fam:GetData().CollidesWithEntity = coll:IsEnemy() and coll:IsActiveEnemy() and coll:IsVulnerableEnemy() and fam.Velocity:Length() > 0.1
+    end
+end, sawShieldFamiliar)
+
+---@param fam EntityFamiliar
+---@param coll Entity
+---@param low boolean
+---@return boolean | nil
+mod:AddCallback(ModCallbacks.MC_POST_FAMILIAR_COLLISION, function(_, fam, coll, low)
+    if coll then
+		if fam:GetData().CustomShieldFlags > 0 then
+			for _,callback in ipairs(Isaac.GetCallbacks("ON_SAW_SHIELD_COLLISION")) do
+				if callback.Param > 0 and fam:GetData().CustomShieldFlags & callback.Param > 0 then
+					callback.Function(fam, coll)
+				end
+			end
+		end
     end
 end, sawShieldFamiliar)
 
@@ -5453,6 +5481,13 @@ if EID then
 		"All items previosly affected Portal D6 will back, but rerolled on another pool of room in this stage",
 		"Portal D6"
 	)
+
+	EID:addCollectible(
+		mod.RepmTypes.Collectible_SAW_SHIELD,
+		"{{Throwable}} Gives throwable shield that damages enemies when going through them#After 6 bounces shield will slow down#Аfter 10 seconds shield comes back to last player that threw it if not picked up after stopping",
+		"Saw Shield"
+	)
+
 	--ru
 	EID:addCollectible(
 		mod.RepmTypes.COLLECTIBLE_TSUNDERE_FLY,
@@ -5655,6 +5690,142 @@ if EID then
 		"Портальный Д6",
 		"ru"
 	)
+
+	EID:addCollectible(
+		mod.RepmTypes.Collectible_SAW_SHIELD,
+		"{{Throwable}} Дает бросаемый щит, наносящий урон сквозь проходящим врагам#После 6 отскакиваний щит замедляется#После 10 секунд после остановки щит возвращается к последнему бросившему его игроку если он не подобран после остановки",
+		"Пилощит",
+		"ru"
+	)
+
+	local function SawShieldCallback(descObj)
+		
+		local player = Game():GetNearestPlayer(descObj.Entity.Position)
+		local hasCustomFlags = {}
+		local shieldFlags = {
+			[CollectibleType.COLLECTIBLE_BRIMSTONE] = TearFlags.TEAR_BRIMSTONE_BOMB,
+			[CollectibleType.COLLECTIBLE_IPECAC] = TearFlags.TEAR_POISON | TearFlags.TEAR_EXPLOSIVE,
+			[CollectibleType.COLLECTIBLE_TOXIC_SHOCK] = TearFlags.TEAR_POISON,
+			[CollectibleType.COLLECTIBLE_FIRE_MIND] = TearFlags.TEAR_BURN,
+			[CollectibleType.COLLECTIBLE_PYROMANIAC] = TearFlags.TEAR_BURN | TearFlags.TEAR_EXPLOSIVE,
+			[CollectibleType.COLLECTIBLE_SPIDER_BITE] = TearFlags.TEAR_SLOW,
+			[CollectibleType.COLLECTIBLE_SULFURIC_ACID] = TearFlags.TEAR_ACID,
+			[CollectibleType.COLLECTIBLE_BALL_OF_TAR] = TearFlags.TEAR_GISH,
+			[CollectibleType.COLLECTIBLE_MOMS_KNIFE] = TearFlags.TEAR_NEEDLE,
+			[CollectibleType.COLLECTIBLE_MOMS_RAZOR] = TearFlags.TEAR_NEEDLE,
+			[CollectibleType.COLLECTIBLE_RAZOR_BLADE] = TearFlags.TEAR_NEEDLE,
+			[CollectibleType.COLLECTIBLE_LODESTONE] = TearFlags.TEAR_MAGNETIZE,
+			[CollectibleType.COLLECTIBLE_STRANGE_ATTRACTOR] = TearFlags.TEAR_MAGNETIZE,
+			[CollectibleType.COLLECTIBLE_EXPLOSIVO] = TearFlags.TEAR_EXPLOSIVE,
+			[CollectibleType.COLLECTIBLE_LOST_CONTACT] = TearFlags.TEAR_SHIELDED,
+		}
+		for _, item in ipairs(player:GetHistory():GetCollectiblesHistory()) do
+			if shieldFlags[item:GetItemID()] then
+				hasCustomFlags[item:GetItemID()] = true
+			end
+		end
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_BRIMSTONE] then
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, "#{{Collectible118}} 20% chance for enemy on death to fire 4 brimstone lasers in cardinal directions")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, "#{{Collectible118}} 20% шанс врагу при смерти выстрелить 4 кровавых лазера в кардинальных направлениях")
+			end
+		end
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_IPECAC] or hasCustomFlags[CollectibleType.COLLECTIBLE_PYROMANIAC] or hasCustomFlags[CollectibleType.COLLECTIBLE_EXPLOSIVO] then
+			local itemsStr = "#"
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_IPECAC] and "{{Collectible149}} " or "")
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_PYROMANIAC] and "{{Collectible223}} " or "")
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_EXPLOSIVO] and "{{Collectible401}} " or "")
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, itemsStr.."10% chance for enemy explode on death")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, itemsStr.."10% шанс что враг взорвется при смерти")
+			end
+		end
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_IPECAC] or hasCustomFlags[CollectibleType.COLLECTIBLE_TOXIC_SHOCK]
+		or player:HasPlayerForm(PlayerForm.PLAYERFORM_BOB) then
+			local itemsStr = "#"
+			itemsStr = itemsStr..(player:HasPlayerForm(PlayerForm.PLAYERFORM_BOB) and "{{Bob}} " or "")
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_IPECAC] and "{{Collectible149}} " or "")
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_TOXIC_SHOCK] and "{{Collectible350}} " or "")
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, itemsStr.."Enemies get poisoned when damaged")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, itemsStr.."Враги ортавлияются ядом при получении урона")
+			end
+		end
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_FIRE_MIND] or hasCustomFlags[CollectibleType.COLLECTIBLE_PYROMANIAC] then
+			local itemsStr = "#"
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_PYROMANIAC] and "{{Collectible223}} " or "")
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_FIRE_MIND] and "{{Collectible257}} " or "")
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, itemsStr.."Enemies get burned when damaged")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, itemsStr.."Враги воспламеняются при получении урона")
+			end
+		end
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_SPIDER_BITE] then
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, "#{{Collectible89}} Enemies get slowed when damaged")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, "#{{Collectible89}} Враги замедляются при получении урона")
+			end
+		end
+
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_SULFURIC_ACID] then
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, "#{{Collectible463}} Chance to destroy rocks and open secret doors")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, "#{{Collectible463}} Шанс уничтожить камни и открыть секретные комнаты")
+			end
+		end
+
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_BALL_OF_TAR] then
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, "#{{Collectible231}} Shield spawns black creep when moving")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, "#{{Collectible231}} Щит создает черные лужи при перемещении")
+			end
+		end
+
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_MOMS_KNIFE] or hasCustomFlags[CollectibleType.COLLECTIBLE_MOMS_RAZOR]
+		or hasCustomFlags[CollectibleType.COLLECTIBLE_RAZOR_BLADE] then
+			local itemsStr = "#"
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_MOMS_KNIFE] and "{{Collectible114}} " or "")
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_RAZOR_BLADE] and "{{Collectible126}} " or "")
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_MOMS_RAZOR] and "{{Collectible508}} " or "")
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, itemsStr.."Makes enemies bleed")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, itemsStr.."Заставляет врагов кровоточить")
+			end
+		end
+
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_LODESTONE] or hasCustomFlags[CollectibleType.COLLECTIBLE_STRANGE_ATTRACTOR] then
+			local itemsStr = "#"
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_STRANGE_ATTRACTOR] and "{{Collectible315}} " or "")
+			itemsStr = itemsStr..(hasCustomFlags[CollectibleType.COLLECTIBLE_LODESTONE] and "{{Collectible617}} " or "")
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, itemsStr.."Enemies become magnetized")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, itemsStr.."Враги намагничиваются")
+			end
+		end
+
+		if hasCustomFlags[CollectibleType.COLLECTIBLE_LOST_CONTACT] then
+			if EID:getLanguage() == "en_us" then
+				EID:appendToDescription(descObj, "#{{Collectible213}} Shield blocks projectiles")
+			elseif EID:getLanguage() == "ru" then
+				EID:appendToDescription(descObj, "#{{Collectible213}} Щит блокирует снаряды")
+			end
+		end
+		return descObj
+	end
+
+	local function SawShieldCond(descObj)
+		return descObj.ObjType == 5 and descObj.ObjVariant == 100 and descObj.ObjSubType == mod.RepmTypes.Collectible_SAW_SHIELD
+	end
+	EID:addDescriptionModifier("Repentance- Saw Shield Modifier", SawShieldCond, SawShieldCallback)
 
 	EID:addCard(
 		iceCard,
