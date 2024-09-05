@@ -16,7 +16,7 @@
 				<Item Name = "Portal D6" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1" />
 				<Item Name = "Frozen Food" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 				
 				<Item Name = "Saw Shield" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 				
-				
+				<Item Name = "Strong Spirit" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 
         </Pool>
 		<Pool Name= "shop">
 		        <Item Name = "Salami" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1"/>
@@ -28,7 +28,8 @@
 		        <Item Name = "Lost shroom" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1"/>
 				<Item Name="PRObackstabber" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>
 				<Item Name = "VHS cassette" Weight = "1" DecreaseBy="1" RemoveOn="0.1" />
-				<Item Name = "Book of necromancer" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1" />
+				<Item Name = "Book of necromancer" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1" />				
+				<Item Name = "Strong Spirit" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 
 		</Pool>	
         <Pool Name="greedShop">               
 				<Item Name="Pro Kamikaze" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>
@@ -48,7 +49,8 @@
 				<Item Name = "Frozen Flies" Weight = "1" DecreaseBy="1" RemoveOn="0.1" />					 
         		<Item Name = "Siren Horns" Weight = "1" DecreaseBy="1" RemoveOn="0.1" />
 		        <Item Name = "How To Dig" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1" />  
-				<Item Name = "Portal D6" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1" /> 
+				<Item Name = "Portal D6" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1" /> 				
+				<Item Name = "Strong Spirit" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 
 		</Pool>	
         <Pool Name="library">              
 				<Item Name="Book of tails" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>
@@ -70,7 +72,8 @@
 				<Item Name = "Rot" Weight="1" DecreaseBy="1" RemoveOn="0.1" />
 				<Item Name = "Frozen Flies" Weight = "1" DecreaseBy="1" RemoveOn="0.1" />
 				<Item Name = "Frozen Food" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 		
-				<Item Name = "Saw Shield" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 							
+				<Item Name = "Saw Shield" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 					
+				<Item Name = "Strong Spirit" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 						
 		</Pool>
 		<Pool Name="ultraSecret">
 		<Item Name="PRObackstabber" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>
@@ -88,6 +91,7 @@
 		<Pool Name="angel">
 		<Item Name="Holy shell" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>
 		<Item Name="Curious heart" Weight="1" DecreaseBy="1" RemoveOn="0.1"/>
-		<Item Name="Holy master key" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>
+		<Item Name="Holy master key" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>				
+				<Item Name = "Strong Spirit" Weight = "1" DecreaseBy="1" RemoveOn="0.1" /> 
 		</Pool>
 </ItemPools>

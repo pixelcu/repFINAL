@@ -36,7 +36,7 @@
 	<active id="32" name="Sim's Axe" description="Timber!" gfx="Sim Axe.png" achievement= "SimDelirium" quality="2" chargetype="timed" maxcharges="100" />
 	<passive id="33" name="Frozen Food" description="HP up + brain freeze" gfx="frozen food.png" cache="damage" quality="2" />
 	<passive id = "8" name="Siren Horns" description="Come hither" gfx="Siren Horns.png" quality="3" />
-	<passive id="34" name="Angel Spirit" description="Let your angel defend you" gfx="aaa.png" quality="2" hidden="true" />
+	<passive id="34" name="Strong Spirit" description="Let's settle this!" gfx="SSItem.png" quality="2"/>
 	<active id="35" name="How To Dig" description="Time to dig!" gfx="how to dig.png" maxcharges = "3" quality="2" />
 	<active id="36" name="Battered Lighter" description="Still working" gfx="battered lighter.png" maxcharges = "1" quality="2" />
 	<active id="37" name="Holy Lighter" description="Baptism by fire" gfx="holy lighter.png" maxcharges = "6" chargetype = "normal" quality="2" />
