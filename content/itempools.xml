@@ -25,7 +25,6 @@
 				<Item Name="110V" Weight="1" DecreaseBy="1" RemoveOn="0.1" />
 	    </Pool>
 		<Pool Name= "secret">
-		        <Item Name = "Lost shroom" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1"/>
 				<Item Name="PRObackstabber" Weight = "1" DecreaseBy="1" RemoveOn="0.1"/>
 				<Item Name = "VHS cassette" Weight = "1" DecreaseBy="1" RemoveOn="0.1" />
 				<Item Name = "Book of necromancer" Weight = "1" DecreaseBy = "1" RemoveOn = "0.1" />				

@@ -3,7 +3,6 @@
 <!-- Items -->
     <passive id="2" name="Strawberry Milk" description="Confuse your enemies" gfx="strawberry milk.png" cache="tearcolor" quality="2" /> 
 	<!-- hearts="1" maxhearts="2" soulhearts="3" blackhearts="4" coins="5" keys="6" bombs="7" -->
-    <passive id="9" name="Lost Shroom" description="Tastes like socks..." gfx="lost_shroom.png" quality="2" />
 	<!-- <passive id="777" name="Pro Backstabber" description="Gentlemen..." gfx="PRObackstabber.png"/> -->
 	<active id="10" name="Book of Tales" description="Zzzz..." gfx="book of tails.png" maxcharges="6" quality="4" />
 	<active id="12" maxcharges="2" description="Well that backfired..." gfx="prokamikadze.png" name="Pro Kamikaze" quality="4" />
