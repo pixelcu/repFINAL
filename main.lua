@@ -5050,13 +5050,30 @@ mod:AddCallback(ModCallbacks.MC_FAMILIAR_UPDATE, function(_, fam)
             end
         end
     end
-    if fam.State ~= 2 then
+    if fam.State < 2 then
         if fam.State ~= 1 then
-            d.Speed = math.max(0, d.Speed - 0.1)
+            d.Speed = math.max(0, d.Speed - 0.15)
+			fam.PositionOffset.Y = lerp(fam.PositionOffset.Y, 0, 0.03)
         end
-        if fam.Velocity:Length() < 2 then
-            fam.PositionOffset.Y = lerp(fam.PositionOffset.Y, 0, 0.1)
-        end
+        
+		if fam.PositionOffset.Y >= -8 and fam.Velocity:Length() > 7 then
+			fam.State = 3
+			sprite:Play("HitSide", true)
+			sfx:Play(mod.RepmTypes.SFX_SAW_SHIELD_CRASH)
+			d.Speed = 0
+			sprite.Rotation = fam.Velocity:GetAngleDegrees()
+			fam.Velocity = Vector.Zero
+			fam.PositionOffset.Y = 0
+			if d.CustomShieldFlags > 0 then
+				for _,callback in pairs(Isaac.GetCallbacks("ON_SAW_SHIELD_CRASH")) do
+					if callback.Param > 0 and d.CustomShieldFlags & callback.Param > 0 then
+						callback.Function(fam, fam:GetDropRNG(), player)
+					end
+				end
+			end
+			return
+		end
+
 		if fam.Velocity:Length() < 0.1 then
 			d.ReturnCooldown = math.max(0, d.ReturnCooldown - 1)
 		end
@@ -5073,20 +5090,24 @@ mod:AddCallback(ModCallbacks.MC_FAMILIAR_UPDATE, function(_, fam)
             if d.Bounces > 0 then
                 d.Bounces = d.Bounces - 1
             else
-                d.Speed = d.Speed * 0.85
+                d.Speed = d.Speed * 0.65
             end
         end
         if d.ReturnCooldown <= 0 then
             fam.State = 2
         end
         fam.CollisionDamage = 0.3 * d.Speed
-    else
+    elseif fam.State == 2 then
         local speed = (player.Position - fam.Position):Resized(30)
         fam.Velocity = lerp(fam.Velocity, speed, 0.1)
         fam.PositionOffset.Y = -math.max(0, fam.Velocity:Length())
         fam.CollisionDamage = 0
         fam.GridCollisionClass = EntityGridCollisionClass.GRIDCOLL_WALLS
-    end
+	elseif sprite:IsFinished("HitSide") then
+		fam.State = 0
+		sprite.Rotation = 0
+		sprite:Play(sprite:GetDefaultAnimation(), true)
+	end
     d.CollidesWithEntity = false
 end, sawShieldFamiliar)
 
@@ -5106,20 +5127,21 @@ end, TearFlags.TEAR_BURN)
 ---@param effect EntityEffect
 mod:AddCallback(ModCallbacks.MC_POST_EFFECT_UPDATE, function(_, effect)
     local shield = effect.SpawnerEntity
-    if not shield or not (shield:ToFamiliar() and shield.Variant == sawShieldFamiliar) then
+    if not shield or shield:ToFamiliar() and (shield.Variant ~= sawShieldFamiliar or shield:ToFamiliar().State == 3) then
         effect:Remove()
         return
     end
     shield = shield:ToFamiliar()
+	if shield.State == 3 then effect:Remove() end
     effect.SpriteRotation = shield.Velocity:Length() > 0.2 and (shield.Velocity):GetAngleDegrees() or lerp(effect.SpriteRotation, 90, 0.2)
     effect.SpriteScale = Vector(1.5, 1.5)
     effect.DepthOffset = -1
-    effect.SpriteOffset = Vector(0, -5)
+    --effect.SpriteOffset = Vector(0, -5)
 end, sawShieldFamiliarFire)
 
 ---@param fam EntityFamiliar
 mod:AddCallback(ModCallbacks.MC_POST_FAMILIAR_RENDER, function(_, fam, offset)
-    local famSprite = fam:GetSprite()
+	local famSprite = fam:GetSprite()
     local d = fam:GetData()
     if d.CustomShieldFlags and d.CustomShieldFlags > 0 then
         for _,callback in pairs(Isaac.GetCallbacks("ON_SAW_SHIELD_RENDER")) do
@@ -5193,6 +5215,14 @@ mod:AddCallback("ON_SAW_SHIELD_DEATH", function(entity, rng, shield, player)
     end
 end, TearFlags.TEAR_EXPLOSIVE)
 
+mod:AddCallback("ON_SAW_SHIELD_CRASH", function(shield, rng, player)
+	player = player or shield.Player
+    if rng:RandomFloat() <= 0.1 then
+        Isaac.Explode(shield.Position, player, 100)
+        rng:Next()
+    end
+end, TearFlags.TEAR_EXPLOSIVE)
+
 mod:AddCallback("ON_SAW_SHIELD_DEATH", function(entity, rng, shield, player)
     if rng:RandomFloat() <= 0.2 then
         for _, angle in ipairs({0, 90, 180, 270}) do
@@ -5222,7 +5252,7 @@ end, TearFlags.TEAR_SHIELDED)
 ---@return boolean | nil
 mod:AddCallback(ModCallbacks.MC_FAMILIAR_GRID_COLLISION, function(_, fam, gridIdx, grid)
     if fam.Variant == sawShieldFamiliar then
-        if grid and fam.Velocity:Length() > 0.1 and fam.State ~= 2 then
+        if grid and fam.Velocity:Length() > 0.1 and fam.State < 2 then
             if grid:ToPoop() then
                 grid:Hurt(4)
             end
@@ -5246,7 +5276,8 @@ mod:AddCallback(ModCallbacks.MC_PRE_FAMILIAR_COLLISION, function(_, fam, coll, l
         if coll:ToPlayer() then
             local player = coll:ToPlayer()
             ---@cast player EntityPlayer
-            if player:GetHeldEntity() == nil and not player:IsHoldingItem() and player:IsExtraAnimationFinished() and fam.FireCooldown <= 0 then
+            if player:GetHeldEntity() == nil and not player:IsHoldingItem() and player:IsExtraAnimationFinished() and fam.FireCooldown <= 0
+			and fam.State ~= 3 then
                 -- Isaac Rebalanced code part from Mom's Bracelet
                 local helper = Isaac.Spawn(EntityType.ENTITY_EFFECT, EffectVariant.GRID_ENTITY_PROJECTILE_HELPER, 0, fam.Position, Vector.Zero, player)
                 helper.Parent = player
