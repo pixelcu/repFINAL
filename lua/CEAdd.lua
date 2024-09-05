@@ -8,11 +8,12 @@ RepMMod:AddCallback(ModCallbacks.MC_POST_PLAYER_UPDATE, function(a)
 	local playerCount = game:GetNumPlayers()
 	for playerIndex = 0, playerCount - 1 do
 		local player = Isaac.GetPlayer(playerIndex)
-		if
-			player:GetPlayerType() == Isaac.GetPlayerTypeByName("Frosty", false)
-			and PersistentGameData:Unlocked(Isaac.GetAchievementIdByName("Frosty")) == false
-		then
-			game:Fadeout(1, 1)
+		if player:GetPlayerType() == Isaac.GetPlayerTypeByName("Frosty", false) and PersistentGameData:Unlocked(Isaac.GetAchievementIdByName("Frosty")) == false then
+			player:ChangePlayerType(0)
+		elseif player:GetPlayerType() == Isaac.GetPlayerTypeByName("Tainted Frosty", true) and PersistentGameData:Unlocked(Isaac.GetAchievementIdByName("Frosty_B")) == false then
+			player:ChangePlayerType(Isaac.GetPlayerTypeByName("Frosty", false))
+		elseif player:GetPlayerType() == Isaac.GetPlayerTypeByName("TSim", true) then
+			player:ChangePlayerType(Isaac.GetPlayerTypeByName("Sim", false))
 		end
 	end
 end)
@@ -212,7 +213,6 @@ RepMMod:AddCallback(ModCallbacks.MC_USE_CARD, function(_, _, player, flags)
 end, Isaac.GetCardIdByName("HammerCard"))
 
 local Immune = false
-local Heal = false
 RepMMod:AddCallback(ModCallbacks.MC_USE_PILL, function(_, _, player, flags)
 	Immune = true
 	if player:HasFullHearts() then
@@ -238,47 +238,141 @@ RepMMod:AddCallback(ModCallbacks.MC_ENTITY_TAKE_DMG, function(_, player, amount,
 				+ player:GetSoulHearts()
 				+ player:GetRottenHearts()
 			<= amount
-		and player:HasCollectible(Isaac.GetItemIdByName("Angel Spirit"), true)
+		and player:HasCollectible(Isaac.GetItemIdByName("Strong Spirit"), true)
 	then
+	local Data = RepMMod:repmGetPData(player)
+	if
+		Data == nil
+		or (Data ~= nil and Data.StrongSpiritSS == nil)
+		or (Data ~= nil and Data.StrongSpiritSS ~= nil and Data.StrongSpiritSS.Damage == true)
+	then
+		return
+	end
+	Data.StrongSpiritSS.Damage = true
+	Data.StrongSpiritSS.Sprite:Play("Damaged", true)
 		game:ShakeScreen(50)
-		Heal = true
 		player:UseActiveItem(58, false, false, true, false, -1, 0)
-		local PD = player.Damage
-		player.Damage = player.Damage + 3
-		Isaac.CreateTimer(function()
-			player.Damage = player.Damage - 0.5
-		end, 30, 6, true)
-		Isaac.CreateTimer(function()
-			player.Damage = PD
-		end, 180, 1, true)
-		player:RemoveCollectible(Isaac.GetItemIdByName("Angel Spirit"))
+		game:GetPlayer(0):AddHearts(4)
+		game:GetPlayer(0):AddSoulHearts(2)
+		player:GetData().RepSSDamageBoost = 600
+		print(player:GetData().RepSSDamageBoost)
 		return false
 	end
 end, EntityType.ENTITY_PLAYER)
+
+RepMMod:AddCallback(ModCallbacks.MC_POST_PLAYER_RENDER, function()
+	for i = 1, game:GetNumPlayers() do
+		local Player = Isaac.GetPlayer(i - 1)
+		local Data = RepMMod:repmGetPData(Player)
+		if Data ~= nil and (Data ~= nil and Data.StrongSpiritSS ~= nil) and Data.StrongSpiritSS.Sprite ~= nil then
+			Data.StrongSpiritSS.Sprite:Render(Isaac.WorldToScreen(Player.Position))
+			Data.StrongSpiritSS.Sprite:Update()
+			if Data.StrongSpiritSS.Sprite:IsFinished("Fade") then
+				Data.StrongSpiritSS.Sprite = nil
+			end
+			if Data.StrongSpiritSS.Sprite ~= nil then
+				if Data.StrongSpiritSS.Sprite:IsFinished("Damaged") then
+					Data.StrongSpiritSS.Sprite:Play("Idle", true)
+				end
+				if not Data.StrongSpiritSS.Sprite:IsPlaying("Fade") and Data.StrongSpiritSS.Damage == true then
+					Data.StrongSpiritSS.Sprite:Play("Fade", true)
+				end
+			end
+		end
+	end
+end)
+RepMMod:AddCallback(ModCallbacks.MC_POST_ADD_COLLECTIBLE, function(_,_, _, _, _, _, Player)
+	local Data = RepMMod:repmGetPData(Player)
+	if Data.StrongSpiritSS == nil then
+		Data.StrongSpiritSS = {
+			Damage = false,
+			Sprite = Sprite(),
+		}
+	end
+	Data.StrongSpiritSS.Sprite = Sprite()
+	Data.StrongSpiritSS.Sprite:Load("gfx/SSStatus.anm2", true)
+	Data.StrongSpiritSS.Sprite:Play("Idle", true)
+end, Isaac.GetItemIdByName("Strong Spirit"))
+
+
 RepMMod:AddCallback(ModCallbacks.MC_POST_NEW_ROOM, function()
 	Immune = false
 end)
 RepMMod:AddCallback(ModCallbacks.MC_POST_NEW_LEVEL, function()
-	if Heal == true then
-		Heal = false
-		print(game:GetPlayer(0):GetMaxHearts())
-		if game:GetPlayer(0):GetMaxHearts() >= 1 then
-			game:GetPlayer(0):AddHearts(20)
-		else
-			game:GetPlayer(0):AddBlackHearts(10)
-		end
+	for i = 1, game:GetNumPlayers() do
+		local Player = Isaac.GetPlayer(i - 1)
+		local Data = RepMMod:repmGetPData(Player)
+		if Data ~= nil and Data.StrongSpiritSS ~= nil and Data.StrongSpiritSS.Damage == true and Player:HasCollectible(Isaac.GetItemIdByName("Strong Spirit"), true) then
+		Data.StrongSpiritSS.Damage = false
+		Data.StrongSpiritSS.Sprite = Sprite()
+		Data.StrongSpiritSS.Sprite:Load("gfx/SSStatus.anm2", true)
+		Data.StrongSpiritSS.Sprite:Play("Idle", true)
+	end
 	end
 end)
 
 function RepMMod:PortalUse(item, RNG, EntityPlayer, Flags, ActiveSlot)
-	RepMMod.saveTable.PortalD6 = {}
-	local roomsList = Game():GetLevel():GetRooms()
-	local roomEntities = Isaac.GetRoomEntities()
-	for _, entity in ipairs(roomEntities) do
-		if entity.Type == 5 then
-			print(entity.Variant .. "/" .. entity.SubType)
-			if entity.Variant == 100 then
-				if entity.SubType == 0 then
+	if RepMMod.saveTable.PortalD6Use == nil or RepMMod.saveTable.PortalD6Use == false then
+		RepMMod.saveTable.PortalD6Use = true
+		RepMMod.saveTable.PortalD6 = {}
+		local roomsList = Game():GetLevel():GetRooms()
+		local roomEntities = Isaac.GetRoomEntities()
+		for _, entity in ipairs(roomEntities) do
+			if entity.Type == 5 then
+				print(entity.Variant .. "/" .. entity.SubType)
+				if entity.Variant == 100 then
+					if entity.SubType == 0 then
+					else
+						table.insert(
+							RepMMod.saveTable.PortalD6,
+							{
+								Variant = entity.Variant,
+								SubType = entity.SubType,
+								Position = entity.Position,
+								price = entity:ToPickup().Price,
+								roomType = roomsList:Get(math.random(0, roomsList.Size - 1)).Data.Type,
+							}
+						)
+						Isaac.Spawn(1000, 15, 0, entity.Position, Vector.Zero, entity)
+						entity:Remove()
+					end
+				elseif
+					entity.Variant == 50
+					or entity.Variant == 52
+					or entity.Variant == 51
+					or entity.Variant == 53
+					or entity.Variant == 54
+					or entity.Variant == 55
+					or entity.Variant == 56
+					or entity.Variant == 57
+					or entity.Variant == 58
+					or entity.Variant == 60
+					or entity.Variant == 390
+					or entity.Variant == 360
+				then
+					if entity.SubType == 0 then
+					else
+						table.insert(
+							RepMMod.saveTable.PortalD6,
+							{
+								Variant = entity.Variant,
+								SubType = entity.SubType,
+								Position = entity.Position,
+								price = entity:ToPickup().Price,
+								roomType = roomsList:Get(math.random(0, roomsList.Size - 1)).Data.Type,
+							}
+						)
+						Isaac.Spawn(1000, 15, 0, entity.Position, Vector.Zero, entity)
+						entity:Remove()
+					end
+				elseif
+					entity.Variant == 370
+					or entity.Variant == 380
+					or entity.Variant == 340
+					or entity.Variant == 150
+					or entity.Variant == 110
+					or entity.Variant == 41
+				then
 				else
 					table.insert(
 						RepMMod.saveTable.PortalD6,
@@ -287,152 +381,108 @@ function RepMMod:PortalUse(item, RNG, EntityPlayer, Flags, ActiveSlot)
 							SubType = entity.SubType,
 							Position = entity.Position,
 							price = entity:ToPickup().Price,
-							roomType = roomsList:Get(math.random(0, roomsList.Size - 1)).Data.Type,
 						}
 					)
 					Isaac.Spawn(1000, 15, 0, entity.Position, Vector.Zero, entity)
 					entity:Remove()
 				end
-			elseif
-				entity.Variant == 50
-				or entity.Variant == 52
-				or entity.Variant == 51
-				or entity.Variant == 53
-				or entity.Variant == 54
-				or entity.Variant == 55
-				or entity.Variant == 56
-				or entity.Variant == 57
-				or entity.Variant == 58
-				or entity.Variant == 60
-				or entity.Variant == 390
-				or entity.Variant == 360
-			then
-				if entity.SubType == 0 then
-				else
-					table.insert(
-						RepMMod.saveTable.PortalD6,
-						{
-							Variant = entity.Variant,
-							SubType = entity.SubType,
-							Position = entity.Position,
-							price = entity:ToPickup().Price,
-							roomType = roomsList:Get(math.random(0, roomsList.Size - 1)).Data.Type,
-						}
-					)
-					Isaac.Spawn(1000, 15, 0, entity.Position, Vector.Zero, entity)
-					entity:Remove()
-				end
-			elseif
-				entity.Variant == 370
-				or entity.Variant == 380
-				or entity.Variant == 340
-				or entity.Variant == 150
-				or entity.Variant == 110
-				or entity.Variant == 41
-			then
-			else
-				table.insert(
-					RepMMod.saveTable.PortalD6,
-					{
-						Variant = entity.Variant,
-						SubType = entity.SubType,
-						Position = entity.Position,
-						price = entity:ToPickup().Price,
-					}
-				)
-				Isaac.Spawn(1000, 15, 0, entity.Position, Vector.Zero, entity)
-				entity:Remove()
 			end
 		end
-	end
-	EntityPlayer:RemoveCollectible(Isaac.GetItemIdByName("Portal D6"))
-	EntityPlayer:AddCollectible(Isaac.GetItemIdByName("Portal D6 "))
-	return true
-end
-RepMMod:AddCallback(ModCallbacks.MC_USE_ITEM, RepMMod.PortalUse, Isaac.GetItemIdByName("Portal D6"))
-
-function RepMMod:Portal2Use(item, RNG, EntityPlayer, Flags, ActiveSlot)
-	if RepMMod.saveTable.PortalD6 == {} or RepMMod.saveTable.PortalD6 == nil then
-		EntityPlayer:RemoveCollectible(Isaac.GetItemIdByName("Portal D6 "))
-		EntityPlayer:AddCollectible(Isaac.GetItemIdByName("Portal D6"))
+		Isaac.GetItemConfig():GetCollectible(Isaac.GetItemIdByName("Portal D6")).MaxCharges = 3
+		return true
+	else
+		RepMMod.saveTable.PortalD6Use = false
+		if RepMMod.saveTable.PortalD6 == {} or RepMMod.saveTable.PortalD6 == nil then
+			Isaac.GetItemConfig():GetCollectible(Isaac.GetItemIdByName("Portal D6")).MaxCharges = 6
+			return true
+		end
+		for _, table in ipairs(RepMMod.saveTable.PortalD6) do
+			local item
+			if table.Variant == 100 then
+				local newid
+				if EntityPlayer:HasCollectible(CollectibleType.COLLECTIBLE_CHAOS) or table.roomType == 3 then
+					newid = Game():GetItemPool():GetCollectible(math.random(1, 30), true, Random(), 25)
+				elseif table.roomType == 2 then
+					newid = Game():GetItemPool():GetCollectible(1, true, Random(), 25)
+				elseif table.roomType == 24 then
+					newid = Game():GetItemPool():GetCollectible(26, true, Random(), 25)
+				elseif table.roomType == 5 then
+					newid = Game():GetItemPool():GetCollectible(2, true, Random(), 25)
+				elseif table.roomType == 7 or table.roomType == 8 then
+					newid = Game():GetItemPool():GetCollectible(5, true, Random(), 25)
+				elseif table.roomType == 9 then
+					newid = Game():GetItemPool():GetCollectible(10, true, Random(), 25)
+				elseif table.roomType == 10 then
+					newid = Game():GetItemPool():GetCollectible(12, true, Random(), 25)
+				elseif table.roomType == 12 then
+					newid = Game():GetItemPool():GetCollectible(6, true, Random(), 25)
+				elseif table.roomType == 14 then
+					newid = Game():GetItemPool():GetCollectible(3, true, Random(), 25)
+				elseif table.roomType == 15 then
+					newid = Game():GetItemPool():GetCollectible(4, true, Random(), 25)
+				elseif table.roomType == 29 then
+					newid = Game():GetItemPool():GetCollectible(24, true, Random(), 25)
+				else
+					newid = Game():GetItemPool():GetCollectible(0, true, Random(), 25)
+				end
+				item = Isaac.Spawn(
+					5,
+					table.Variant,
+					newid,
+					table.Position or game:GetRoom():FindFreePickupSpawnPosition(game:GetRoom():GetCenterPos()),
+					Vector(
+						math.cos(2.0 * math.pi * math.random(1, 24) / math.random(1, 24)),
+						math.sin(2.0 * math.pi * math.random(1, 24) / math.random(1, 24))
+					),
+					nil
+				)
+			else
+				item = Isaac.Spawn(
+					5,
+					table.Variant,
+					table.SubType,
+					table.Position or game:GetRoom():FindFreePickupSpawnPosition(game:GetRoom():GetCenterPos()),
+					Vector(
+						math.cos(2.0 * math.pi * math.random(1, 24) / math.random(1, 24)),
+						math.sin(2.0 * math.pi * math.random(1, 24) / math.random(1, 24))
+					),
+					nil
+				)
+			end
+			Isaac.Spawn(
+				1000,
+				15,
+				0,
+				table.Position or game:GetRoom():FindFreePickupSpawnPosition(game:GetRoom():GetCenterPos()),
+				Vector.Zero,
+				EntityPlayer
+			)
+			item:ToPickup().Price = table.price
+		end
+		EntityPlayer:UseActiveItem(166, false, false, true, false, -1, 0)
+		Isaac.GetItemConfig():GetCollectible(Isaac.GetItemIdByName("Portal D6")).MaxCharges = 10
 		return true
 	end
-	for _, table in ipairs(RepMMod.saveTable.PortalD6) do
-		local item
-		if table.Variant == 100 then
-			local newid
-			if EntityPlayer:HasCollectible(CollectibleType.COLLECTIBLE_CHAOS) or table.roomType == 3 then
-				newid = Game():GetItemPool():GetCollectible(math.random(1, 30), true, Random(), 25)
-			elseif table.roomType == 2 then
-				newid = Game():GetItemPool():GetCollectible(1, true, Random(), 25)
-			elseif table.roomType == 24 then
-				newid = Game():GetItemPool():GetCollectible(26, true, Random(), 25)
-			elseif table.roomType == 5 then
-				newid = Game():GetItemPool():GetCollectible(2, true, Random(), 25)
-			elseif table.roomType == 7 or table.roomType == 8 then
-				newid = Game():GetItemPool():GetCollectible(5, true, Random(), 25)
-			elseif table.roomType == 9 then
-				newid = Game():GetItemPool():GetCollectible(10, true, Random(), 25)
-			elseif table.roomType == 10 then
-				newid = Game():GetItemPool():GetCollectible(12, true, Random(), 25)
-			elseif table.roomType == 12 then
-				newid = Game():GetItemPool():GetCollectible(6, true, Random(), 25)
-			elseif table.roomType == 14 then
-				newid = Game():GetItemPool():GetCollectible(3, true, Random(), 25)
-			elseif table.roomType == 15 then
-				newid = Game():GetItemPool():GetCollectible(4, true, Random(), 25)
-			elseif table.roomType == 29 then
-				newid = Game():GetItemPool():GetCollectible(24, true, Random(), 25)
-			else
-				newid = Game():GetItemPool():GetCollectible(0, true, Random(), 25)
-			end
-			item = Isaac.Spawn(
-				5,
-				table.Variant,
-				newid,
-				table.Position or game:GetRoom():FindFreePickupSpawnPosition(game:GetRoom():GetCenterPos()),
-				Vector(
-					math.cos(2.0 * math.pi * math.random(1, 24) / math.random(1, 24)),
-					math.sin(2.0 * math.pi * math.random(1, 24) / math.random(1, 24))
-				),
-				nil
-			)
-		else
-			item = Isaac.Spawn(
-				5,
-				table.Variant,
-				table.SubType,
-				table.Position or game:GetRoom():FindFreePickupSpawnPosition(game:GetRoom():GetCenterPos()),
-				Vector(
-					math.cos(2.0 * math.pi * math.random(1, 24) / math.random(1, 24)),
-					math.sin(2.0 * math.pi * math.random(1, 24) / math.random(1, 24))
-				),
-				nil
-			)
-		end
-		Isaac.Spawn(
-			1000,
-			15,
-			0,
-			table.Position or game:GetRoom():FindFreePickupSpawnPosition(game:GetRoom():GetCenterPos()),
-			Vector.Zero,
-			EntityPlayer
-		)
-		item:ToPickup().Price = table.price
-	end
-	EntityPlayer:UseActiveItem(166, false, false, true, false, -1, 0)
-	EntityPlayer:RemoveCollectible(Isaac.GetItemIdByName("Portal D6 "))
-	EntityPlayer:AddCollectible(Isaac.GetItemIdByName("Portal D6"))
-	return true
 end
-RepMMod:AddCallback(ModCallbacks.MC_USE_ITEM, RepMMod.Portal2Use, Isaac.GetItemIdByName("Portal D6 "))
+RepMMod:AddCallback(ModCallbacks.MC_USE_ITEM, RepMMod.PortalUse, Isaac.GetItemIdByName("Portal D6"))
 
 -----------------------------------------------------------
 --TAINTED FROSTY
 -----------------------------------------------------------
 
-local function TFrostTimer()
+function RepMMod:TFrostTimer()
 	RepMMod:AnyPlayerDo(function(player)
+		if player:GetData().RepSSDamageBoost ~= nil and player:GetData().RepSSDamageBoost >= 0 then
+			player:AddCacheFlags(CacheFlag.CACHE_ALL)
+			player:EvaluateItems()
+			player.Damage = player.Damage + (5/600 * player:GetData().RepSSDamageBoost)
+			player:GetData().RepSSDamageBoost = player:GetData().RepSSDamageBoost - 1
+			if player:GetData().RepSSDamageBoost == 0 then
+				player:AddCacheFlags(CacheFlag.CACHE_ALL)
+        		player:EvaluateItems()
+				player:GetData().RepSSDamageBoost = nil
+			end
+		end
 		local pdata = RepMMod:repmGetPData(player)
 		if pdata.TFrosty_FreezeTimer and pdata.TFrosty_FreezeTimer > 0 then
 			pdata.TFrosty_FreezeTimer = pdata.TFrosty_FreezeTimer - 1
@@ -450,7 +500,7 @@ local function TFrostTimer()
 	end)
 end
 
-RepMMod:AddCallback(ModCallbacks.MC_POST_UPDATE, TFrostTimer)
+RepMMod:AddCallback(ModCallbacks.MC_POST_UPDATE, RepMMod.TFrostTimer)
 
 function RepMMod:updateTGFrosty(player, cacheFlag)
 	if player:GetPlayerType() == (Isaac.GetPlayerTypeByName("Tainted Ghost Frosty", false)) then
@@ -488,5 +538,5 @@ function RepMMod:WispTGFSpawn(entity)
 end
 RepMMod:AddCallback(ModCallbacks.MC_POST_ENTITY_KILL, RepMMod.WispTGFSpawn)
 
-if CEMod then
+if ElitiumMod then
 end
